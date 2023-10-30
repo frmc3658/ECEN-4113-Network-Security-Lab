@@ -1,0 +1,34 @@
+{
+  "tests": [
+    {
+      "name": "anomaly1",
+      "setup": "sudo -H pip3 install scapy",
+      "run": "python3 detector.py ./test/proj3-test-case.pcap | sort",
+      "input": "",
+      "output": "128.3.164.248\r\n128.3.164.249\r\n128.3.23.117\r\n128.3.23.158\r\n128.3.23.2\r\n128.3.23.5\r\n192.168.0.15",
+      "comparison": "exact",
+      "timeout": 1,
+      "points": 30
+    },
+    {
+      "name": "anomaly2",
+      "setup": "sudo -H pip3 install scapy",
+      "run": "python3 detector.py test/proj3-test-case2.pcap",
+      "input": "",
+      "output": "172.16.0.8",
+      "comparison": "exact",
+      "timeout": 1,
+      "points": 30
+    },
+    {
+      "name": "detector",
+      "setup": "sudo -H pip3 install scapy",
+      "run": "sudo test/network.sh",
+      "input": "",
+      "output": "Pass",
+      "comparison": "exact",
+      "timeout": 1,
+      "points": 40
+    }
+  ]
+}
