@@ -1,7 +1,6 @@
 from scapy.all import send, conf, L3RawSocket
 from scapy.all import TCP, IP, Ether, Raw
 import socket
-import re
 import datetime
 
 # Known Key used in MIM attack
