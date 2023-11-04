@@ -19,7 +19,6 @@ def process_pcap(pcap_fname):
                     synDict[srcIP] += 1
                 else:
                     synDict[srcIP] = 1
-                    synAckDict[srcIP] = 1
             # Otherwise check for SYN+ACK
             elif packet[TCP].flags == 'SA':
                 dst = packet[IP].dst
@@ -40,9 +39,8 @@ def process_pcap(pcap_fname):
             # Packet reached threshold of SYN+ACK
             if synPackets >= (3 * synAckPackets):
                 suspiciousIPs.append(ip)
-            # Packet is in the SYN dict, but not SYN+ACK dict
-            elif synAckPackets is None:
-                suspiciousIPs.append(ip)
+        else:
+            suspiciousIPs.append(ip)
 
     # Print the suspicious IP addresses
     for ip in suspiciousIPs:
