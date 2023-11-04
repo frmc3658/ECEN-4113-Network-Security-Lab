@@ -22,24 +22,27 @@ def process_pcap(pcap_fname):
                     synAckDict[srcIP] = 1
             # Otherwise check for SYN+ACK
             elif packet[TCP].flags == 'SA':
-                srcIP = packet[IP].dst
+                dst = packet[IP].dst
 
                 # Increment SYN+ACK count for IP
-                if srcIP in synAckDict:
-                    synAckDict[srcIP] += 1
+                if dst in synAckDict:
+                    synAckDict[dst] += 1
                 else:
-                    synAckDict[srcIP] = 1
+                    synAckDict[dst] = 1
 
     # Detect possible SYN scans
     suspiciousIPs = []
 
-    for srcIP, synPackets in synDict.items():
-        # If the sourvce IP is in the SYN+ACK dictionary...
-        if srcIP in synAckDict:
-            synAckPackets = synAckDict[srcIP]
+    for ip, synPackets in synDict.items():
+        if ip in synAckDict:
+            synAckPackets = synAckDict[ip]
 
-            if synPackets > (3 * synAckPackets):
-                suspiciousIPs.append(srcIP)
+            # Packet reached threshold of SYN+ACK
+            if synPackets >= (3 * synAckPackets):
+                suspiciousIPs.append(ip)
+            # Packet is in the SYN dict, but not SYN+ACK dict
+            elif synAckPackets is None:
+                suspiciousIPs.append(ip)
 
     # Print the suspicious IP addresses
     suspiciousIPs.sort()
