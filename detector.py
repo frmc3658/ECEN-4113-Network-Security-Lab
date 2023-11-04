@@ -45,8 +45,6 @@ def process_pcap(pcap_fname):
                 suspiciousIPs.append(ip)
 
     # Print the suspicious IP addresses
-    suspiciousIPs.sort()
-
     for ip in suspiciousIPs:
         print(ip)
 
